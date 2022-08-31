@@ -79,7 +79,7 @@ tasks = list()
 tasks.append(threading.Thread(target=between_callback, args=(TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"],)))
 
 if UserIn["withchat"] == True:
-    tasks.append(threading.Thread(target=between_callback, args=(TwitcastWebsocket.TwitcastEventSocket.RecieveMessages, TwAPI.CurrentStreamPubSubURL.url, f"{UserIn['fileformat']}", UserIn['printChat'],UserIn['chatformat'], UserIn['giftformat'])))
+    tasks.append(threading.Thread(target=between_callback, args=(TwitcastWebsocket.TwitcastEventSocket.RecieveMessages, TwAPI.CurrentStreamPubSubURL.url, TwAPI, f"{UserIn['fileformat']}", UserIn['printChat'],UserIn['chatformat'], UserIn['giftformat'])))
 
 #    TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
 #    print(f"Using URL: {TwAPI.CurrentStream.llfmp4_stream_main}")
