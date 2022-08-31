@@ -65,8 +65,8 @@ class TwitcastVideoSocket:
         
         url = qualities[quality]
         if url == None and quality == "low":
-            print("Unable to locate MobileSource, Defaulting to Base.")
-            url = qualities["worst"]
+            print("Unable to locate MobileSource, Defaulting to Main.")
+            url = qualities["best"]
             
         
         await TwitcastVideoSocket.listen(url, TwitcastApiOBJ, filename, NoRetry)
