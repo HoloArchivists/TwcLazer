@@ -3,16 +3,16 @@
 # TWITCAST DOWNLOADER WITH CHAT
 # https://github.com/ef1500
 
-import twitcasting.TwitcastAPI as TwitcastAPI
-import twitcasting.TwitcastStream as TwitcastStream
-import twitcasting.TwitcastWebsocket as TwitcastWebsocket
-import helpers.CLIhelper as CLIhelper
-import utils.ChatFormatter as ChatFormatter
-import datetime
 import argparse
-import threading
-
 import asyncio
+import datetime
+import threading
+import os
+
+import helpers.CLIhelper as CLIhelper
+import twitcasting.TwitcastAPI as TwitcastAPI
+import twitcasting.TwitcastWebsocket as TwitcastWebsocket
+import utils.ChatFormatter as ChatFormatter
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("-h", "--help", action="store_true")
@@ -51,6 +51,14 @@ UserIn = {
     "giftformat": args.giftFormat
 }
 
+if UserIn["path"] is not None and not os.path.exists(UserIn["path"]):
+    print(f"{UserIn['path']} is not a valid directory.")
+    exit()
+
+if TwitcastAPI.TwitcastingAPI.is_live(UserIn["username"]) == False:
+    print(f"{UserIn['username']} is not live.")
+    exit()
+
 TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
 
 # Now that we have the API object Created, we're good to go for making the fileformat object
@@ -60,12 +68,15 @@ FileFormat_Translations = {
     "%%Tl" : TwAPI.CurrentStreamInfo.telop,
     "%%Ci" : TwAPI.CurrentStreamInfo.category_id,
     "%%Cn" : TwAPI.CurrentStreamInfo.category_name,
-    "%%Dy" : today.year.__str__(),
-    "%%Dm" : today.month.__str__(),
-    "%%Dd" : today.day.__str__(),
+    "%%Dy" : str(today.year),
+    "%%Dm" : str(today.month),
+    "%%Dd" : str(today.day),
     "%%Un" : UserIn["username"]
 }
 UserIn["fileformat"] = ChatFormatter.strTranslate(UserIn["fileformat"], FileFormat_Translations)
+
+if UserIn["path"] is not None:
+    UserIn["fileformat"] = os.path.join(UserIn["path"], UserIn["fileformat"])
 
 # Great, now we're locked and loaded!
 def between_callback(func, *args, **kwargs):
@@ -76,13 +87,14 @@ def between_callback(func, *args, **kwargs):
     loop.close()
 
 tasks = list()
-tasks.append(threading.Thread(target=between_callback, args=(TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"],)))
+tasks.append(threading.Thread(target=between_callback, args=(
+    TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"],)))
 
-if UserIn["withchat"] == True:
-    tasks.append(threading.Thread(target=between_callback, args=(TwitcastWebsocket.TwitcastEventSocket.RecieveMessages, TwAPI.CurrentStreamPubSubURL.url, TwAPI, f"{UserIn['fileformat']}", UserIn['printChat'],UserIn['chatformat'], UserIn['giftformat'])))
+if UserIn["withchat"] is True:
+    tasks.append(threading.Thread(target=between_callback, args=(
+        TwitcastWebsocket.TwitcastEventSocket.RecieveMessages, TwAPI.CurrentStreamPubSubURL.url,
+        TwAPI, f"{UserIn['fileformat']}", UserIn['printChat'],UserIn['chatformat'],
+        UserIn['giftformat'])))
 
-#    TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
-#    print(f"Using URL: {TwAPI.CurrentStream.llfmp4_stream_main}")
-#    asyncio.run(TwitcastWebsocket.TwitcastVideoSocket.listenForData(TwAPI.CurrentStream.llfmp4_stream_main, UserIn.filename))
 for task in tasks:
     task.start()

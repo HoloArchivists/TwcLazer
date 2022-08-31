@@ -86,11 +86,3 @@ class StreamEvent_Gift:
     sender_screenName: str 
     
     eventType: str
-    
-@dataclass
-class UserInput:
-    username: str
-    
-    filename: str
-    filepath: str = None 
-    

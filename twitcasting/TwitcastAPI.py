@@ -79,6 +79,16 @@ class TwitcastingAPI:
         
         return TwitcastStream.EventsPubSubURL(PubSubRequestData["url"])
     
+    @staticmethod
+    def is_live(username) -> bool:
+        is_user_live = requests.get(f"https://twitcasting.tv/userajax.php?c=islive&u={username}")
+        if is_user_live.text == "0":
+            return False
+        if is_user_live.text == "1":
+            return True
+        else:
+            return False
+    
     def __init__(self, UserInput) -> None:
         # Input TwitcastStream.py Userinput object
         self.userInput = UserInput

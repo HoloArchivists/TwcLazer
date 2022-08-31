@@ -22,29 +22,30 @@ class ChatFormatter:
             "%%An" : ParsedComment.author_name,
             "%%Ap" : ParsedComment.author_profile_image,
             "%%As" : ParsedComment.author_screenName,
-            "%%Ca" : ParsedComment.createdAt.__str__(),
-            "%%Ei" : ParsedComment.event_id.__str__(),
+            "%%Ca" : str(ParsedComment.createdAt),
+            "%%Ei" : str(ParsedComment.event_id),
             "%%Et" : ParsedComment.eventType,
-            "%%Nc" : ParsedComment.numComments.__str__(),
+            "%%Nc" : str(ParsedComment.numComments),
             "%%Mg" : ParsedComment.message
         }
         return strTranslate(formatString, comment_translations)
     
     def FormatGifts(formatString, ParsedComment):
         gift_translations = {
-            "%%Ca" : ParsedComment.createdAt.__str__(),
-            "%%Ei" : ParsedComment.event_id.__str__(),
+            "%%Ca" : str(ParsedComment.createdAt),
+            "%%Ei" : str(ParsedComment.event_id),
             "%%Et" : ParsedComment.eventType,
             "%%Id" : ParsedComment.item_detailImage,
-            "%%Ie" : ParsedComment.item_effectCommand.__str__(),
+            "%%Ie" : str(ParsedComment.item_effectCommand),
             "%%Ii" : ParsedComment.item_image,
             "%%In" : ParsedComment.item_name,
-            "%%Is" : ParsedComment.item_showsSenderInfo.__str__(),
+            "%%Is" : str(ParsedComment.item_showsSenderInfo),
             "%%Mg" : ParsedComment.message,
             "%%Si" : ParsedComment.sender_id,
-            "%%Sg" : ParsedComment.sender_grade.__str__(),
+            "%%Sg" : str(ParsedComment.sender_grade),
             "%%Sn" : ParsedComment.sender_name,
             "%%Ss" : ParsedComment.sender_screenName,
             "%%Sp" : ParsedComment.sender_profileImage
         }
         return strTranslate(formatString, gift_translations)
+    

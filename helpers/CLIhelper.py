@@ -32,7 +32,7 @@ Flags
   -pC, --printChat            Print the chat to the terminal
   -wC, --withChat             Export the stream's chat to a file
   
-Misc (Required if --withChat is True)
+Misc (Use if --withChat is true. Completely Optional.)
   -cF, --chatFormat           Override The chat's default formatting
   -gF, --giftFormat           Override The gift's default formatting
   """
