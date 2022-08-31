@@ -40,15 +40,15 @@ class TwitcastVideoSocket:
                 except Exception:
                     if TwitcastApiOBJ.GetStream(TwitcastApiOBJ.userInput["username"]).live == True:
                         if NoRetry == True:
-                            print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*10, end='\r')
+                            print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*20, end='\r')
                             await ws.close()
                             break
                         else:
-                            print(f"[WebSocket] Connection Dropped, Reconnecting" + " "*10, end='\r')
+                            print(f"[WebSocket] Connection Dropped, Reconnecting" + " "*20, end='\r')
                             await ws.close()
                             
                     else:
-                        print(f"[WebSocket] Stream Ended, Closing Socket..." + " "*10, end='\r')
+                        print(f"[WebSocket] Stream Ended, Closing Socket..." + " "*20, end='\r')
                         await ws.close()
                         break
     
