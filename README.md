@@ -1,5 +1,5 @@
 # TwcLazer
-### Twitcasting recorder and chat exporter
+### Twitcasting recorder and chat exporter (With Discord Integration!)
 
 ```
   _______           _                        
