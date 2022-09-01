@@ -25,6 +25,10 @@ Optional arguments
   -ff, --fileformat FORMAT    filename format for the stream
   -p, --path PATH             Path to download the stream to
   -q, --quality [low, best, worst]
+  -m, --monitor               Monitor the channel until user is live,
+                              then send a notification in discord.
+                              Does not download the livestream.
+                              (requires -dU argument)
 
 Flags
   -nW, --noWarn               Don't display lagspike warning when downloading high bitrate streams
@@ -35,6 +39,13 @@ Flags
 Misc (Use if --withChat is true. Completely Optional.)
   -cF, --chatFormat           Override The chat's default formatting
   -gF, --giftFormat           Override The gift's default formatting
+  
+Discord Notification Arguments (Use with -m)
+  -dU, --discordUrl           Provide a Discord Webhook URL to send the
+                              Notification to.
+  
+  -nT, --notifText            Discord Notification Text (Default: None)
+                              Use if you want to ping yourself when a user is live.
   """
 
 HIGH_QUAL_WARNING = f"""
