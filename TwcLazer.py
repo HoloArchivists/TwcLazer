@@ -87,8 +87,12 @@ def between_callback(func, *args, **kwargs):
     loop.close()
 
 tasks = list()
-tasks.append(threading.Thread(target=between_callback, args=(
-    TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"],)))
+if UserIn["quality"] is not None:
+    tasks.append(threading.Thread(target=between_callback, args=(
+        TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"], UserIn["quality"], UserIn["noWarn"], UserIn["noRetry"],)))
+else:
+    tasks.append(threading.Thread(target=between_callback, args=(
+        TwitcastWebsocket.TwitcastVideoSocket.runListener, TwAPI, UserIn["fileformat"], UserIn["noRetry"],)))    
 
 if UserIn["withchat"] is True:
     tasks.append(threading.Thread(target=between_callback, args=(
