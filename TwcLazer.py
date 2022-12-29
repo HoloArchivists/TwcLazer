@@ -102,3 +102,5 @@ if UserIn["withchat"] is True:
 
 for task in tasks:
     task.start()
+    task.join()
+ 
