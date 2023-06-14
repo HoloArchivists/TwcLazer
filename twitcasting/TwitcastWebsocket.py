@@ -146,4 +146,3 @@ class TwitcastEventSocket:
         url = websocket_url
         async with websockets.connect(url) as ws:
             await TwitcastEventSocket.eventhandler(ws, TwAPI, filename, printChat, CommentFormatString, GiftFormatString)
-            await asyncio.Future()  # run forever
