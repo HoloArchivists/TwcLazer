@@ -129,7 +129,8 @@ class TwitcastEventSocket:
             message = await websocket.recv()
             with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
                 eventData = json.loads(message)
-                
+                if not eventData:
+                    continue
                 try:
                     if eventData[0]["type"] == "comment":
                         eventMessage = TwitcastEventSocket.parseComment(eventData)
@@ -149,8 +150,6 @@ class TwitcastEventSocket:
                         if printChat == True:
                             print("[ChatEvent] " + formatted_event_message+ " "*30,end='\n\r')       
                         
-                except IndexError:
-                    pass
                 except Exception:
                     pass
 
