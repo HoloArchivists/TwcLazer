@@ -37,8 +37,8 @@ class TwitcastVideoSocket:
                                 recieved_bytes += len(msg)
                                 print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end='\r')
                                 filewriter.write(msg)
-                
-                except Exception:
+                except Exception as e:
+                    print(f"[WebSocket] {e!r}, checking if stream is still live")
                     if TwitcastApiOBJ.is_live():
                         if NoRetry == True:
                             print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*30, end='\r')
@@ -149,9 +149,9 @@ class TwitcastEventSocket:
 
                         if printChat == True:
                             print("[ChatEvent] " + formatted_event_message+ " "*30,end='\n\r')       
-                        
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"[EventSocket] error while processing chat message: {e!r}")
+                    print(f"[EventSocket] message: {eventData}")
 
     async def RecieveMessages(websocket_url, TwAPI, filename, printChat, CommentFormatString, GiftFormatString):
         url = websocket_url
