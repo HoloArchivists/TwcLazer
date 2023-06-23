@@ -42,15 +42,12 @@ class TwitcastVideoSocket:
                     if TwitcastApiOBJ.is_live():
                         if NoRetry == True:
                             print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*30, end='\r')
-                            await ws.close()
                             break
                         else:
                             print(f"[WebSocket] Connection Dropped, Reconnecting" + " "*30, end='\r')
-                            await ws.close()
                             
                     else:
                         print(f"[WebSocket] Stream Ended, Closing Socket..." + " "*30, end='\r')
-                        await ws.close()
                         break
     
     async def runListener(TwitcastApiOBJ, filename, quality="low", NoWarn=False, NoRetry=False):
