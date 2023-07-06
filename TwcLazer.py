@@ -13,6 +13,7 @@ import helpers.CLIhelper as CLIhelper
 import twitcasting.TwitcastAPI as TwitcastAPI
 import twitcasting.TwitcastWebsocket as TwitcastWebsocket
 import utils.ChatFormatter as ChatFormatter
+from utils.CookiesHandler import CookiesHandler
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("-h", "--help", action="store_true")
@@ -20,6 +21,7 @@ parser.add_argument("-u", "--username", type=str)
 parser.add_argument("-q", "--quality", type=str, default="low")
 parser.add_argument("-ff", "--fileformat", type=str, default="Twitcasting-%%Un-%%Dy_%%Dm_%%Dd")
 parser.add_argument("-p", "--path", type=str, default=None)
+parser.add_argument("-c", "--cookies", type=str, default=None)
 
 parser.add_argument("-nW", "--noWarn", action="store_true", default=False)
 parser.add_argument("-nR", "--noRetry", action="store_true", default=False)
@@ -51,11 +53,18 @@ UserIn = {
     "giftformat": args.giftFormat
 }
 
+if args.cookies is not None:
+    UserIn["cookies"] = CookiesHandler.load_cookies(args.cookies)
+else:
+    UserIn["cookies"] = None
+
 if UserIn["path"] is not None and not os.path.exists(UserIn["path"]):
     print(f"{UserIn['path']} is not a valid directory.")
     exit()
 
-if TwitcastAPI.TwitcastingAPI.is_live(UserIn["username"]) == False:
+if TwitcastAPI.TwitcastingAPI.user_is_live(UserIn["username"], UserIn["cookies"]):
+    print(f"{UserIn['username']} is live, downloading")
+else:
     print(f"{UserIn['username']} is not live.")
     exit()
 

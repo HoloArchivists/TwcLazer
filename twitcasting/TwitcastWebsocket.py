@@ -27,7 +27,7 @@ class TwitcastVideoSocket:
     async def listen(url, TwitcastApiOBJ, filename, NoRetry=False):
         recieved_bytes = 0
         while True:
-            async with websockets.connect(url) as ws:
+            async with websockets.connect(url, extra_headers=TwitcastApiOBJ.cookies_header) as ws:
                 try:
                     while True:
                         with open(f"{filename}.mp4".replace(":", "-"), 'ab') as filewriter:
@@ -38,7 +38,7 @@ class TwitcastVideoSocket:
                                 filewriter.write(msg)
                 
                 except Exception:
-                    if TwitcastApiOBJ.is_live(TwitcastApiOBJ.userInput["username"]) == True:
+                    if TwitcastApiOBJ.is_live():
                         if NoRetry == True:
                             print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*30, end='\r')
                             await ws.close()
@@ -113,7 +113,7 @@ class TwitcastEventSocket:
     # Todo: Allow for full customization of the format
     # e.g raw json, only specific attributes, etc.
     async def eventhandler(websocket, TwitcastApiOBJ, filename, printChat, CommentFormatString, GiftFormatString):
-        while TwitcastApiOBJ.is_live(TwitcastApiOBJ.userInput["username"]) == True:
+        while TwitcastApiOBJ.is_live():
             message = await websocket.recv()
             with open(f"{filename}.txt".replace(":", "-"), 'a+', encoding="utf8") as f:
                 eventData = json.loads(message)
@@ -144,5 +144,5 @@ class TwitcastEventSocket:
 
     async def RecieveMessages(websocket_url, TwAPI, filename, printChat, CommentFormatString, GiftFormatString):
         url = websocket_url
-        async with websockets.connect(url) as ws:
+        async with websockets.connect(url, extra_headers=TwAPI.cookies_header) as ws:
             await TwitcastEventSocket.eventhandler(ws, TwAPI, filename, printChat, CommentFormatString, GiftFormatString)
