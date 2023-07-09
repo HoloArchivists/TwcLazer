@@ -1,23 +1,68 @@
 # Twitcasting Downloader API Functions
-import requests
 import json
+import re
+from typing import Optional
+import requests
 
 import twitcasting.TwitcastStream as TwitcastStream
 from utils.CookiesHandler import CookiesHandler
 
 class TwitcastingAPI:
     '''Class for the functional Twitcasting API'''
-    
+
     # Get Token
-    def GetToken(self, movieID) -> TwitcastStream.HappyToken:
-        HappyTokenURL = "https://twitcasting.tv/happytoken.php"
-        HappyTokenData = {'movie_id': movieID}
-        HappyTokenRequest = self.session.post(HappyTokenURL, data=HappyTokenData)
-        
-        HappyTokenRequestData = json.loads(HappyTokenRequest.text)
-        
-        return TwitcastStream.HappyToken(HappyTokenRequestData["token"])
-        
+    def GetToken(self, movieID, password=None) -> TwitcastStream.HappyToken:
+        TokenURL = f"https://frontendapi.twitcasting.tv/movies/{movieID}/token"
+        TokenData = {"password": password} if password is not None else {}
+        TokenRequest = self.session.post(TokenURL, data=TokenData)
+
+        if TokenRequest.status_code != 200:
+            print(f"Got status code {TokenRequest.status_code} when requesting token for movie {movieID}")
+        try:
+            TokenRequestData = json.loads(TokenRequest.text)
+            Token = TokenRequestData["token"]
+        except (json.decoder.JSONDecodeError, KeyError) as e:
+            print(f"Error parsing token for movie {movieID}: {e!r}. Raw token data: '{TokenRequest.text}'")
+            raise
+
+        return TwitcastStream.HappyToken(Token)
+
+    def GetPasswordCookie(self, username, password=None) -> Optional[TwitcastStream.PasswordCookie]:
+        '''Check if ongoing stream is password-restricted, submit password if required'''
+        user_url = f"https://twitcasting.tv/{username}/"
+        page = self.session.get(user_url)
+        if page.status_code != 200:
+            print(f"Got status code {page.status_code} when requesting {user_url}")
+
+        flags = re.DOTALL | re.IGNORECASE
+        re_form = '<div class="tw-empty-state-action">(.*?)</div>'
+        re_session_id = 'name="cs_session_id" value="(.*?)"'
+
+        password_form = re.search(re_form, page.text, flags)
+        if password_form is None:
+            print("Stream is not password-restricted")
+            return None
+        session_id = re.search(re_session_id, password_form.group(1), flags)
+        if session_id is None:
+            print(f"Unable to extract session_id from secret word form at {user_url}")
+            return None
+        if password is None:
+            print("Current stream appears to be password-restricted. Password can be provided with --secret argument")
+            return None
+
+        # In response to submitting correct password server sets cookie "wpass",
+        # used then to get stream data and access websocket url
+        data = {"password": password, "cs_session_id": session_id.group(1)}
+        self.session.post(user_url, data=data)
+        password_value = CookiesHandler.to_dict(self.session.cookies).get("wpass")
+        password_cookie = TwitcastStream.PasswordCookie(password_value) if password_value else None
+
+        if password_cookie is not None:
+            print(f"Password accepted for livestream {user_url}")
+        else:
+            print(f"Password {password} was not accepted for livestream {user_url}")
+        return password_cookie
+
     # Get Current Stream
     def GetStream(self, username) -> TwitcastStream.StreamServer:
         StreamServerURL = f"https://twitcasting.tv/streamserver.php?target={username}&mode=client"
@@ -68,9 +113,11 @@ class TwitcastingAPI:
             TwitcastStreamData.get("movie").get("pin_message"))
         
     # Get PubSub URL
-    def GetPubSubURL(self, movieID) -> TwitcastStream.EventsPubSubURL:
+    def GetPubSubURL(self, movieID, password=None) -> TwitcastStream.EventsPubSubURL:
         PubSubURL = "https://twitcasting.tv/eventpubsuburl.php"
         PubSubData = {'movie_id': movieID}
+        if password is not None:
+            PubSubData["password"] = password
         PubSubRequest = self.session.post(PubSubURL, data=PubSubData)
         
         PubSubRequestData = json.loads(PubSubRequest.text)
@@ -93,7 +140,9 @@ class TwitcastingAPI:
 
     @property
     def cookies_header(self):
-        return CookiesHandler.get_cookies_header(self.session.cookies, "https://twitcasting.tv")
+        username = self.userInput["username"]
+        user_url = f"https://twitcasting.tv/{username}"
+        return CookiesHandler.get_cookies_header(self.session.cookies, user_url)
 
     def __init__(self, UserInput) -> None:
         # Input TwitcastStream.py Userinput object
@@ -101,7 +150,8 @@ class TwitcastingAPI:
         self.session = requests.Session()
         self.session.cookies = self.userInput["cookies"] or requests.cookies.RequestsCookieJar()
 
+        password = self.GetPasswordCookie(self.userInput["username"], self.userInput["secret"])
         self.CurrentStream = self.GetStream(self.userInput["username"])
-        self.CurrentStreamToken = self.GetToken(self.CurrentStream.movie_id)
+        self.CurrentStreamToken = self.GetToken(self.CurrentStream.movie_id, password)
         self.CurrentStreamInfo = self.GetStreamInfo(self.CurrentStream.movie_id, self.CurrentStreamToken)
-        self.CurrentStreamPubSubURL = self.GetPubSubURL(self.CurrentStream.movie_id)
+        self.CurrentStreamPubSubURL = self.GetPubSubURL(self.CurrentStream.movie_id, password)

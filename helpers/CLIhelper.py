@@ -25,6 +25,7 @@ Optional arguments
   -ff, --fileformat FORMAT    filename format for the stream
   -p, --path PATH             Path to download the stream to
   -q, --quality [low, best, worst]
+  -s, --secret SECRET         Secret word, used to access password-protected streams
 
 Flags
   -nW, --noWarn               Don't display lagspike warning when downloading high bitrate streams

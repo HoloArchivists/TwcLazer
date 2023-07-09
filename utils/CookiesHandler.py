@@ -1,4 +1,5 @@
 from http import cookiejar
+
 import requests
 
 class CookiesHandler:
@@ -25,3 +26,9 @@ class CookiesHandler:
         cookie_string = requests.cookies.get_cookie_header(cookie_jar, r)
         return {'Cookie': cookie_string}
 
+    @staticmethod
+    def to_dict(cookie_jar):
+        # unlike RequestsCookieJar, FileCookieJar doesn't provide
+        # dictionary-like interface for getting cookies values,
+        # so this method can be used instead
+        return {cookie.name: cookie.value for cookie in cookie_jar}

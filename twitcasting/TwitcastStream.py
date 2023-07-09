@@ -49,6 +49,9 @@ class EventsPubSubURL:
 class HappyToken:
     '''Twitcasting Happytoken'''
     token: str
+
+class PasswordCookie(str):
+    '''Used to access password-protected stream'''
     
 @dataclass
 class StreamEvent_Comment:
