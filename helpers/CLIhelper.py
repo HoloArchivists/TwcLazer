@@ -24,6 +24,7 @@ Required Arguments
 Optional arguments
   -ff, --fileformat FORMAT    filename format for the stream
   -p, --path PATH             Path to download the stream to
+  -c, --cookies COOKIES       Path to a cookies file
   -q, --quality [low, best, worst]
 
 Flags
