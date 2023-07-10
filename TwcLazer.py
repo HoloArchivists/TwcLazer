@@ -22,6 +22,7 @@ parser.add_argument("-q", "--quality", type=str, default="low")
 parser.add_argument("-ff", "--fileformat", type=str, default="Twitcasting-%%Un-%%Dy_%%Dm_%%Dd")
 parser.add_argument("-p", "--path", type=str, default=None)
 parser.add_argument("-c", "--cookies", type=str, default=None)
+parser.add_argument("-s", "--secret", type=str, default=None)
 
 parser.add_argument("-nW", "--noWarn", action="store_true", default=False)
 parser.add_argument("-nR", "--noRetry", action="store_true", default=False)
@@ -44,6 +45,7 @@ UserIn = {
     "fileformat": args.fileformat,
     "withchat": args.withChat,
     "path": args.path,
+    "secret": args.secret,
     
     "noWarn": args.noWarn,
     "noRetry": args.noRetry,
