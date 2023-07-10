@@ -31,7 +31,7 @@ class TwitcastVideoSocket:
                 try:
                     while True:
                         with open(f"{filename}.mp4".replace(":", "-"), 'ab') as filewriter:
-                            msg = await asyncio.wait_for(ws.recv(), timeout=2)
+                            msg = await asyncio.wait_for(ws.recv(), timeout=25) # https://github.com/HoloArchivists/TwcLazer/issues/5
                             if len(msg) != 1108:
                                 recieved_bytes += len(msg)
                                 print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end='\r')
