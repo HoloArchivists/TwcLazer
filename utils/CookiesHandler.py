@@ -16,7 +16,10 @@ class CookiesHandler:
         except (cookiejar.LoadError, OSError) as e:
             print(f"failed to load cookies from {path}: {e}")
             return None
-        return cookie_jar
+        requests_cookie_jar = requests.cookies.RequestsCookieJar()
+        for cookie in cookie_jar:
+            requests_cookie_jar.set_cookie(cookie)
+        return requests_cookie_jar
 
     @staticmethod
     def get_cookies_header(cookie_jar, url):
