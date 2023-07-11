@@ -59,6 +59,10 @@ class TwitcastingAPI:
     def GetUserPage(self, username):
         user_url = f"https://twitcasting.tv/{username}/"
         page = self.session.get(user_url)
+
+        if page.headers.get('Set-Cookie', '').find('tc_ss=deleted') > -1:
+            print("Logged out by server, session stored in cookies file is no longer valid")
+
         if page.status_code != 200:
             print(f"Got status code {page.status_code} when requesting {user_url}")
         return page
