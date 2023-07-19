@@ -8,7 +8,7 @@ class CookiesHandler:
     def load_cookies(path):
         cookie_jar = cookiejar.MozillaCookieJar(path)
         try:
-            cookie_jar.load()
+            cookie_jar.load(ignore_expires=True)
             print(f"cookies successfully loaded from {path}")
         except FileNotFoundError:
             print(f"failed to load cookies from {path}: no such file")
@@ -18,6 +18,10 @@ class CookiesHandler:
             return None
         requests_cookie_jar = requests.cookies.RequestsCookieJar()
         for cookie in cookie_jar:
+            if cookie.expires == 0:
+                cookie.expires = None
+            if cookie.path != '/':
+                cookie.path_specified = True
             requests_cookie_jar.set_cookie(cookie)
         return requests_cookie_jar
 
