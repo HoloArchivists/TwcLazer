@@ -12,12 +12,9 @@ class TwitcastingAPI:
 
     # Get Token
     def GetToken(self, movieID, password=None) -> TwitcastStream.HappyToken:
-
-        HappyTokenURL = "https://twitcasting.tv/happytoken.php"
-        HappyTokenData = {'movie_id': movieID}
-        if password is not None:
-            HappyTokenData["password"] = password
-        TokenRequest = self.session.post(HappyTokenURL, data=HappyTokenData)
+        TokenURL = f"https://frontendapi.twitcasting.tv/movies/{movieID}/token"
+        TokenData = {"password": password} if password is not None else {}
+        TokenRequest = self.session.post(TokenURL, data=TokenData)
 
         if TokenRequest.status_code != 200:
             print(f"Got status code {TokenRequest.status_code} when requesting token for movie {movieID}")
