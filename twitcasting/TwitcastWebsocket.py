@@ -4,6 +4,7 @@ import twitcasting.TwitcastStream as TwitcastStream
 import utils.ChatFormatter as ChatFormatter
 import helpers.CLIhelper as CLIhelper
 import json
+import urllib
 
 # Twitcasting Video Socket
 # Get Video Data from the twitcasting websocket
@@ -67,10 +68,24 @@ class TwitcastVideoSocket:
         if url == None and quality == "low":
             print("Unable to locate MobileSource, Defaulting to Main.")
             url = qualities["best"]
-            
-        
+        password = TwitcastApiOBJ.GetPasswordCookie(TwitcastApiOBJ.userInput["username"])
+        if password is not None:
+            url = update_url(url, [("word", password)])
+
         await TwitcastVideoSocket.listen(url, TwitcastApiOBJ, filename, NoRetry)
-            
+
+def update_url(url, params):
+    url = urllib.parse.unquote(url)
+    parsed_url = urllib.parse.urlparse(url)
+    get_args = parsed_url.query
+    parsed_get_args = urllib.parse.parse_qsl(get_args)
+    parsed_get_args.extend(params)
+    encoded_get_args = urllib.parse.urlencode(parsed_get_args, doseq=True)
+    return urllib.parse.ParseResult(
+        parsed_url.scheme, parsed_url.netloc, parsed_url.path,
+        parsed_url.params, encoded_get_args, parsed_url.fragment
+    ).geturl()
+
 # Twitcast Event Socket
 # Socket for recieving events from the chat and gifts things like that
 class TwitcastEventSocket:
