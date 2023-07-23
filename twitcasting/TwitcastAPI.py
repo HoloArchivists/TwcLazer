@@ -1,20 +1,49 @@
 # Twitcasting Downloader API Functions
+import hashlib
 import json
 import re
+import time
 from typing import Optional
+
 import requests
 
-import twitcasting.TwitcastStream as TwitcastStream
 from utils.CookiesHandler import CookiesHandler
+import twitcasting.TwitcastStream as TwitcastStream
+
 
 class TwitcastingAPI:
     '''Class for the functional Twitcasting API'''
 
+    def GetAuthSessionID(self, user_page) -> Optional[str]:
+        flags = re.DOTALL | re.IGNORECASE
+        re_auth_session_id = 'web-authorize-session-id&quot;:&quot;(.*?)&quot;'
+        auth_session_id = re.search(re_auth_session_id, user_page.text, flags)
+        if auth_session_id is None:
+            print(f"Unable to extract session-id from user page {user_page.url}")
+            return None
+        return auth_session_id.group(1)
+
+    def GenerateAuthHeaders(self, path, sessionID, method="POST") -> dict:
+        if sessionID is None:
+            print(f"Unable to generate authorization headers for {path}: no session id provided")
+            return {}
+
+        seed = "rahqd3ej7juspjuo"
+        timestamp = int(time.time())
+        text = f"{seed}{timestamp}{method}{path}{sessionID}"
+        h = hashlib.sha256()
+        h.update(text.encode())
+        hashed_text = h.hexdigest()
+        authorizekey = f"{timestamp}.{hashed_text}"
+
+        return {"x-web-authorizekey": authorizekey, "x-web-sessionid": sessionID}
+
     # Get Token
-    def GetToken(self, movieID, password=None) -> TwitcastStream.HappyToken:
+    def GetToken(self, movieID, sessionID, password=None) -> TwitcastStream.HappyToken:
         TokenURL = f"https://frontendapi.twitcasting.tv/movies/{movieID}/token"
+        headers = self.GenerateAuthHeaders(f"/movies/{movieID}/token", sessionID)
         TokenData = {"password": password} if password is not None else {}
-        TokenRequest = self.session.post(TokenURL, data=TokenData)
+        TokenRequest = self.session.post(TokenURL, data=TokenData, headers=headers)
 
         if TokenRequest.status_code != 200:
             print(f"Got status code {TokenRequest.status_code} when requesting token for movie {movieID}")
@@ -27,18 +56,21 @@ class TwitcastingAPI:
 
         return TwitcastStream.HappyToken(Token)
 
-    def GetPasswordCookie(self, username, password=None) -> Optional[TwitcastStream.PasswordCookie]:
-        '''Check if ongoing stream is password-restricted, submit password if required'''
+    def GetUserPage(self, username):
         user_url = f"https://twitcasting.tv/{username}/"
         page = self.session.get(user_url)
         if page.status_code != 200:
             print(f"Got status code {page.status_code} when requesting {user_url}")
+        return page
+
+    def GetPasswordCookie(self, user_page, password=None) -> Optional[TwitcastStream.PasswordCookie]:
+        '''Check if ongoing stream is password-restricted, submit password if required'''
+        user_url = user_page.url
 
         flags = re.DOTALL | re.IGNORECASE
         re_form = '<div class="tw-empty-state-action">(.*?)</div>'
         re_session_id = 'name="cs_session_id" value="(.*?)"'
-
-        password_form = re.search(re_form, page.text, flags)
+        password_form = re.search(re_form, user_page.text, flags)
         if password_form is None:
             print("Stream is not password-restricted")
             return None
@@ -150,8 +182,12 @@ class TwitcastingAPI:
         self.session = requests.Session()
         self.session.cookies = self.userInput["cookies"] or requests.cookies.RequestsCookieJar()
 
-        password = self.GetPasswordCookie(self.userInput["username"], self.userInput["secret"])
+        user_page = self.GetUserPage(self.userInput["username"])
+        password = self.GetPasswordCookie(user_page, self.userInput["secret"])
+        user_page = self.GetUserPage(self.userInput["username"])
+        sessionID = self.GetAuthSessionID(user_page)
+
         self.CurrentStream = self.GetStream(self.userInput["username"])
-        self.CurrentStreamToken = self.GetToken(self.CurrentStream.movie_id, password)
+        self.CurrentStreamToken = self.GetToken(self.CurrentStream.movie_id, sessionID, password)
         self.CurrentStreamInfo = self.GetStreamInfo(self.CurrentStream.movie_id, self.CurrentStreamToken)
         self.CurrentStreamPubSubURL = self.GetPubSubURL(self.CurrentStream.movie_id, password)
