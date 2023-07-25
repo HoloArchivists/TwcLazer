@@ -56,15 +56,19 @@ class TwitcastingAPI:
 
         return TwitcastStream.HappyToken(Token)
 
-    def GetUserPage(self, username):
+    def GetUserPage(self, username) -> requests.Response:
         user_url = f"https://twitcasting.tv/{username}/"
         page = self.session.get(user_url)
+        if page.headers.get('Set-Cookie', '').find('tc_ss=deleted') > -1:
+            print("Logged out by server, session stored in cookies file is no longer valid")
         if page.status_code != 200:
             print(f"Got status code {page.status_code} when requesting {user_url}")
         return page
 
-    def GetPasswordCookie(self, user_page, password=None) -> Optional[TwitcastStream.PasswordCookie]:
-        '''Check if ongoing stream is password-restricted, submit password if required'''
+    def SubmitPassword(self, user_page: requests.Response, password: Optional[str] = None) -> requests.Response:
+        '''Check if user_page contains password input form, submit password if required.
+        If password gets accepted, request gets redirected to real user page.
+        Return response (or original user_page if no password required) for further processing'''
         user_url = user_page.url
 
         flags = re.DOTALL | re.IGNORECASE
@@ -72,27 +76,33 @@ class TwitcastingAPI:
         re_session_id = 'name="cs_session_id" value="(.*?)"'
         password_form = re.search(re_form, user_page.text, flags)
         if password_form is None:
-            print("Stream is not password-restricted")
-            return None
+            # didn't get asked for password, stream is either unrestricted
+            # or password is already present in cookies loaded from file
+            return user_page
         session_id = re.search(re_session_id, password_form.group(1), flags)
         if session_id is None:
             print(f"Unable to extract session_id from secret word form at {user_url}")
-            return None
+            return user_page
         if password is None:
             print("Current stream appears to be password-restricted. Password can be provided with --secret argument")
-            return None
+            return user_page
 
         # In response to submitting correct password server sets cookie "wpass",
         # used then to get stream data and access websocket url
         data = {"password": password, "cs_session_id": session_id.group(1)}
-        self.session.post(user_url, data=data)
-        password_value = CookiesHandler.to_dict(self.session.cookies).get("wpass")
-        password_cookie = TwitcastStream.PasswordCookie(password_value) if password_value else None
+        page = self.session.post(user_url, data=data)
 
-        if password_cookie is not None:
+        password_form = re.search(re_form, page.text, flags)
+        if password_form is None:
             print(f"Password accepted for livestream {user_url}")
         else:
             print(f"Password {password} was not accepted for livestream {user_url}")
+        return page
+
+    def GetPasswordCookie(self, username) -> Optional[TwitcastStream.PasswordCookie]:
+        '''Password cookie normally received in SubmitPassword, but can be loaded from cookies file'''
+        password_value = self.session.cookies.get("wpass", path=f"/{username}")
+        password_cookie = TwitcastStream.PasswordCookie(password_value) if password_value else None
         return password_cookie
 
     # Get Current Stream
@@ -183,8 +193,8 @@ class TwitcastingAPI:
         self.session.cookies = self.userInput["cookies"] or requests.cookies.RequestsCookieJar()
 
         user_page = self.GetUserPage(self.userInput["username"])
-        password = self.GetPasswordCookie(user_page, self.userInput["secret"])
-        user_page = self.GetUserPage(self.userInput["username"])
+        user_page = self.SubmitPassword(user_page, self.userInput["secret"])
+        password = self.GetPasswordCookie(self.userInput["username"])
         sessionID = self.GetAuthSessionID(user_page)
 
         self.CurrentStream = self.GetStream(self.userInput["username"])
