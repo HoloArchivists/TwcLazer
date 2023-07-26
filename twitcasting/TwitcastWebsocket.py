@@ -31,7 +31,7 @@ class TwitcastVideoSocket:
             async with websockets.connect(url, extra_headers=TwitcastApiOBJ.cookies_header) as ws:
                 try:
                     while True:
-                        with open(f"{filename}.mp4".replace(":", "-"), 'ab') as filewriter:
+                        with open(f"{filename}.mp4", 'ab') as filewriter:
                             msg = await asyncio.wait_for(ws.recv(), timeout=25) # https://github.com/HoloArchivists/TwcLazer/issues/5
                             if len(msg) != 1108:
                                 recieved_bytes += len(msg)
@@ -130,7 +130,7 @@ class TwitcastEventSocket:
     async def eventhandler(websocket, TwitcastApiOBJ, filename, printChat, CommentFormatString, GiftFormatString):
         while TwitcastApiOBJ.is_live():
             message = await websocket.recv()
-            with open(f"{filename}.txt".replace(":", "-"), 'a+', encoding="utf8") as f:
+            with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
                 eventData = json.loads(message)
                 
                 try:

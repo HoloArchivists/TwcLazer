@@ -10,6 +10,16 @@ def strTranslate(original_text, dictionary_of_translations):
             out = out.replace(key, str(target))
     return out
 
+def sanitizeFilename(filename):
+    bad_characters = '\\/:*?<>|"'
+    return filename.translate(str.maketrans(bad_characters, "_" * len(bad_characters)))
+
+def FormatFilename(filename, translations):
+    filename = strTranslate(filename, translations)
+    filename = sanitizeFilename(filename)
+    return filename
+
+
 class ChatFormatter:
     
     def FormatComments(formatString, ParsedComment):

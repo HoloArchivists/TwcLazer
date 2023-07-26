@@ -84,7 +84,7 @@ FileFormat_Translations = {
     "%%Dd" : str(today.day),
     "%%Un" : UserIn["username"]
 }
-UserIn["fileformat"] = ChatFormatter.strTranslate(UserIn["fileformat"], FileFormat_Translations)
+UserIn["fileformat"] = ChatFormatter.FormatFilename(UserIn["fileformat"], FileFormat_Translations)
 
 if UserIn["path"] is not None:
     UserIn["fileformat"] = os.path.join(UserIn["path"], UserIn["fileformat"])
