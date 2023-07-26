@@ -2,15 +2,12 @@
 # Convert percent strings into information
 
 # Translation of information for strings
-def strTranslate(original_text,dictionary_of_translations):
+def strTranslate(original_text, dictionary_of_translations):
     out = original_text
-    for keys,target in dictionary_of_translations.items():
-        if keys in out:
-            out = out.replace(keys, target)
-        else:
-            pass
-#        trans = str.maketrans(target,dictionary_of_translations[target])
-#        out = out.translate(trans)
+    for key, target in dictionary_of_translations.items():
+        if key in out:
+            target = "" if target is None else target
+            out = out.replace(key, str(target))
     return out
 
 class ChatFormatter:
@@ -48,4 +45,3 @@ class ChatFormatter:
             "%%Sp" : ParsedComment.sender_profileImage
         }
         return strTranslate(formatString, gift_translations)
-    
