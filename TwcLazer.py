@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument("-h", "--help", action="store_true")
 parser.add_argument("-u", "--username", type=str)
 parser.add_argument("-q", "--quality", type=str, default="low")
-parser.add_argument("-ff", "--fileformat", type=str, default="Twitcasting-%%Un-%%Dy_%%Dm_%%Dd")
+parser.add_argument("-ff", "--fileformat", type=str, default="Twitcasting-%%Un-%%Mi-%%Dy_%%Dm_%%Dd")
 parser.add_argument("-p", "--path", type=str, default=None)
 parser.add_argument("-c", "--cookies", type=str, default=None)
 parser.add_argument("-s", "--secret", type=str, default=None)
@@ -74,17 +74,18 @@ TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
 
 # Now that we have the API object Created, we're good to go for making the fileformat object
 today = datetime.datetime.now()
+Fileformatter = ChatFormatter.FileFormatter()
 FileFormat_Translations = {
-    "%%Tt" : TwAPI.CurrentStreamInfo.title,
-    "%%Tl" : TwAPI.CurrentStreamInfo.telop,
-    "%%Ci" : TwAPI.CurrentStreamInfo.category_id,
-    "%%Cn" : TwAPI.CurrentStreamInfo.category_name,
-    "%%Dy" : str(today.year),
-    "%%Dm" : str(today.month),
-    "%%Dd" : str(today.day),
-    "%%Un" : UserIn["username"]
+    "Tt" : TwAPI.CurrentStreamInfo.title,
+    "Tl" : TwAPI.CurrentStreamInfo.telop,
+    "Dy" : str(today.year),
+    "Dm" : str(today.month),
+    "Dd" : str(today.day),
+    "Un" : UserIn["username"],
+    "Mi" : TwAPI.CurrentStream.movie_id
 }
-UserIn["fileformat"] = ChatFormatter.FormatFilename(UserIn["fileformat"], FileFormat_Translations)
+
+UserIn["fileformat"] = Fileformatter.FormatFilename(UserIn["fileformat"], FileFormat_Translations)
 
 if UserIn["path"] is not None:
     UserIn["fileformat"] = os.path.join(UserIn["path"], UserIn["fileformat"])
@@ -115,4 +116,4 @@ for task in tasks:
     task.start()
 for task in tasks:
     task.join()
- 
+
