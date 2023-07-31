@@ -136,7 +136,7 @@ class TwitcastEventSocket:
                 try:
                     if eventData[0]["type"] == "comment":
                         eventMessage = TwitcastEventSocket.parseComment(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter.FormatComments(CommentFormatString, eventMessage)
+                        formatted_event_message = ChatFormatter.ChatFormatter().FormatComments(CommentFormatString, eventMessage)
                         
                         f.write(formatted_event_message + "\n")
 
@@ -145,7 +145,7 @@ class TwitcastEventSocket:
                         
                     if eventData[0]["type"] == "gift":
                         eventMessage = TwitcastEventSocket.parseGift(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter.FormatGifts(GiftFormatString, eventMessage)
+                        formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
                         
                         f.write(formatted_event_message + "\n")
 
