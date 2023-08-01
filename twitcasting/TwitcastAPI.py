@@ -28,7 +28,7 @@ class TwitcastingAPI:
             print(f"Unable to generate authorization headers for {path}: no session id provided")
             return {}
 
-        seed = "rahqd3ej7juspjuo"
+        seed = "gta3drd1svkco0ms"
         timestamp = int(time.time())
         text = f"{seed}{timestamp}{method}{path}{sessionID}"
         h = hashlib.sha256()

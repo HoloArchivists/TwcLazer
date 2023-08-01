@@ -73,11 +73,11 @@ Twitcasting-<username>-<year>_<month>_<day>
 
 However, you may override this if you so choose. The following is a list of formatting options you may use:
 
-  %Tt - Title           %Hs - Hashtag (If Any)
-  %Tl - Telop           %Cn - Category Name
-  %Ci - Category ID     %Pm - Pin Message (If any)
-  %Dy - Year            %Dm - Month
-  %Dd - Day             %Un - Username
+  %Tt - Title           %Dm - Month
+  %Tl - Telop           %Un - Username
+  %Mi - Movie ID
+  %Dy - Year
+  %Dd - Day
 ```
 #### Basic Usage
 `python3 twclazer.py -u <username>`
