@@ -38,16 +38,16 @@ class TwitcastVideoSocket:
                                 print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end='\r')
                                 filewriter.write(msg)
                 except Exception as e:
-                    print(f"[WebSocket] {e!r}, checking if stream is still live")
+                    print(f"[WebSocket] {e!r}, checking if stream is still live" + " "*30)
                     if TwitcastApiOBJ.is_live():
                         if NoRetry == True:
-                            print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*30, end='\r')
+                            print("[WebSocket] Connection Dropped, Closing Socket..." + " "*30)
                             break
                         else:
-                            print(f"[WebSocket] Connection Dropped, Reconnecting" + " "*30, end='\r')
+                            print("[WebSocket] Connection Dropped, Reconnecting" + " "*30)
                             
                     else:
-                        print(f"[WebSocket] Stream Ended, Closing Socket..." + " "*30, end='\r')
+                        print("[WebSocket] Stream Ended, Closing Socket..." + " "*30)
                         break
     
     async def runListener(TwitcastApiOBJ, filename, quality="low", NoWarn=False, NoRetry=False):
@@ -139,8 +139,8 @@ class TwitcastEventSocket:
                         f.write(formatted_event_message + "\n")
 
                         if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30, end='\n\r')                        
-                        
+                            print("[ChatEvent] " + formatted_event_message+ " "*30)
+
                     if eventData[0]["type"] == "gift":
                         eventMessage = TwitcastEventSocket.parseGift(eventData)
                         formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
@@ -148,7 +148,7 @@ class TwitcastEventSocket:
                         f.write(formatted_event_message + "\n")
 
                         if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30,end='\n\r')       
+                            print("[ChatEvent] " + formatted_event_message+ " "*30)
                 except Exception as e:
                     print(f"[EventSocket] error while processing chat message: {e!r}")
                     print(f"[EventSocket] message: {eventData}")
