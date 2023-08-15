@@ -126,32 +126,33 @@ class TwitcastEventSocket:
     # e.g raw json, only specific attributes, etc.
     async def eventhandler(websocket, TwitcastApiOBJ, filename, printChat, CommentFormatString, GiftFormatString):
         while TwitcastApiOBJ.is_live():
-            message = await websocket.recv()
-            with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
+            try:
+                message = await asyncio.wait_for(websocket.recv(), timeout=25)
                 eventData = json.loads(message)
                 if not eventData:
                     continue
-                try:
-                    if eventData[0]["type"] == "comment":
-                        eventMessage = TwitcastEventSocket.parseComment(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter().FormatComments(CommentFormatString, eventMessage)
-                        
-                        f.write(formatted_event_message + "\n")
-
-                        if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30)
-
-                    if eventData[0]["type"] == "gift":
-                        eventMessage = TwitcastEventSocket.parseGift(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
-                        
-                        f.write(formatted_event_message + "\n")
-
-                        if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30)
-                except Exception as e:
-                    print(f"[EventSocket] error while processing chat message: {e!r}")
-                    print(f"[EventSocket] message: {eventData}")
+                if eventData[0]["type"] == "comment":
+                    eventMessage = TwitcastEventSocket.parseComment(eventData)
+                    formatted_event_message = ChatFormatter.ChatFormatter().FormatComments(CommentFormatString, eventMessage)
+                elif eventData[0]["type"] == "gift":
+                    eventMessage = TwitcastEventSocket.parseGift(eventData)
+                    formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
+                else:
+                    formatted_event_message = str(eventData)
+                if printChat:
+                    print("[ChatEvent] " + formatted_event_message+ " "*30)
+            except asyncio.TimeoutError:
+                continue
+            except websockets.exceptions.WebSocketException as e:
+                print(f"[EventSocket] error while receiving chat message: {e!r}")
+                break
+            except Exception as e:
+                print(f"[EventSocket] error while processing chat message: {e!r}")
+                print(f"[EventSocket] message: {eventData}")
+                break
+            else:
+                with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
+                    f.write(formatted_event_message + "\n")
 
     async def RecieveMessages(websocket_url, TwAPI, filename, printChat, CommentFormatString, GiftFormatString):
         url = websocket_url
