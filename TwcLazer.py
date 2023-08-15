@@ -8,6 +8,7 @@ import asyncio
 import datetime
 import threading
 import os
+import sys
 
 import helpers.CLIhelper as CLIhelper
 import twitcasting.TwitcastAPI as TwitcastAPI
@@ -36,7 +37,7 @@ args = parser.parse_args()
 
 if args.help is True:
     print(f"{CLIhelper.BANNER}\n{CLIhelper.OPTIONS}\n{CLIhelper.CHAT_FORMATTING_INFO}\n{CLIhelper.FILENAME_FORMATTING_INFO}")
-    exit()
+    sys.exit(0)
 
 # Put input in a dict so we can create an API Object
 UserIn = {
@@ -62,15 +63,19 @@ else:
 
 if UserIn["path"] is not None and not os.path.exists(UserIn["path"]):
     print(f"{UserIn['path']} is not a valid directory.")
-    exit()
+    sys.exit(1)
 
 if TwitcastAPI.TwitcastingAPI.user_is_live(UserIn["username"], UserIn["cookies"]):
     print(f"{UserIn['username']} is live, downloading")
 else:
     print(f"{UserIn['username']} is not live.")
-    exit()
+    sys.exit(1)
 
-TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
+try:
+    TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
+except TwitcastAPI.TwitcastingAPIError as e:
+    print(e)
+    sys.exit(1)
 
 # Now that we have the API object Created, we're good to go for making the fileformat object
 today = datetime.datetime.now()
