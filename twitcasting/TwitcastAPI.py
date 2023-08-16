@@ -11,6 +11,10 @@ from utils.CookiesHandler import CookiesHandler
 import twitcasting.TwitcastStream as TwitcastStream
 
 
+class TwitcastingAPIError(Exception):
+    '''Raised when TwitcastAPI failed to fetch and process all required metadata, making download impossible'''
+
+
 class TwitcastingAPI:
     '''Class for the functional Twitcasting API'''
 
@@ -109,13 +113,14 @@ class TwitcastingAPI:
     def GetStream(self, username) -> TwitcastStream.StreamServer:
         StreamServerURL = f"https://twitcasting.tv/streamserver.php?target={username}&mode=client"
         StreamServer_Request = self.session.get(StreamServerURL)
-        
+
         if StreamServer_Request.status_code != 200:
-            print("User is not live or invalid username.")
-            exit()
-        
+            msg = "Failed to get streamserver links: got status {} at {}"
+            msg = msg.format(StreamServer_Request.status_code, StreamServerURL)
+            raise TwitcastingAPIError(msg)
+
         StreamServerData = json.loads(StreamServer_Request.text)
-        
+
         return TwitcastStream.StreamServer(
             StreamServerData["movie"]["id"],
             StreamServerData["movie"]["live"],
@@ -135,13 +140,13 @@ class TwitcastingAPI:
     def GetStreamInfo(self, movieID, token) -> TwitcastStream.TwitcastStream_:
         TwitcastStreamURL = f"https://frontendapi.twitcasting.tv/movies/{movieID}/status/viewer?token={token.token}"
         TwitcastStream_Request = self.session.get(TwitcastStreamURL)
-        
+
         if TwitcastStream_Request.status_code != 200:
-            print("User is not live or invalid username.")
-            exit()
-        
+            msg = "Failed to get stream info: got status {} at {}".format(TwitcastStream_Request.status_code, TwitcastStreamURL)
+            raise TwitcastingAPIError(msg)
+
         TwitcastStreamData = json.loads(TwitcastStream_Request.text)
-        
+
         return TwitcastStream.TwitcastStream_(
             TwitcastStreamData["update_interval_sec"],
             TwitcastStreamData.get("movie").get("id"),

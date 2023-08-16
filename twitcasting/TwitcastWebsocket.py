@@ -37,20 +37,17 @@ class TwitcastVideoSocket:
                                 recieved_bytes += len(msg)
                                 print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end='\r')
                                 filewriter.write(msg)
-                
-                except Exception:
+                except Exception as e:
+                    print(f"[WebSocket] {e!r}, checking if stream is still live" + " "*30)
                     if TwitcastApiOBJ.is_live():
                         if NoRetry == True:
-                            print(f"[WebSocket] Connection Dropped, Closing Socket..." + " "*30, end='\r')
-                            await ws.close()
+                            print("[WebSocket] Connection Dropped, Closing Socket..." + " "*30)
                             break
                         else:
-                            print(f"[WebSocket] Connection Dropped, Reconnecting" + " "*30, end='\r')
-                            await ws.close()
+                            print("[WebSocket] Connection Dropped, Reconnecting" + " "*30)
                             
                     else:
-                        print(f"[WebSocket] Stream Ended, Closing Socket..." + " "*30, end='\r')
-                        await ws.close()
+                        print("[WebSocket] Stream Ended, Closing Socket..." + " "*30)
                         break
     
     async def runListener(TwitcastApiOBJ, filename, quality="low", NoWarn=False, NoRetry=False):
@@ -129,33 +126,33 @@ class TwitcastEventSocket:
     # e.g raw json, only specific attributes, etc.
     async def eventhandler(websocket, TwitcastApiOBJ, filename, printChat, CommentFormatString, GiftFormatString):
         while TwitcastApiOBJ.is_live():
-            message = await websocket.recv()
-            with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
+            try:
+                message = await asyncio.wait_for(websocket.recv(), timeout=25)
                 eventData = json.loads(message)
-                
-                try:
-                    if eventData[0]["type"] == "comment":
-                        eventMessage = TwitcastEventSocket.parseComment(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter().FormatComments(CommentFormatString, eventMessage)
-                        
-                        f.write(formatted_event_message + "\n")
-
-                        if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30, end='\n\r')                        
-                        
-                    if eventData[0]["type"] == "gift":
-                        eventMessage = TwitcastEventSocket.parseGift(eventData)
-                        formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
-                        
-                        f.write(formatted_event_message + "\n")
-
-                        if printChat == True:
-                            print("[ChatEvent] " + formatted_event_message+ " "*30,end='\n\r')       
-                        
-                except IndexError:
-                    pass
-                except Exception:
-                    pass
+                if not eventData:
+                    continue
+                if eventData[0]["type"] == "comment":
+                    eventMessage = TwitcastEventSocket.parseComment(eventData)
+                    formatted_event_message = ChatFormatter.ChatFormatter().FormatComments(CommentFormatString, eventMessage)
+                elif eventData[0]["type"] == "gift":
+                    eventMessage = TwitcastEventSocket.parseGift(eventData)
+                    formatted_event_message = ChatFormatter.ChatFormatter().FormatGifts(GiftFormatString, eventMessage)
+                else:
+                    formatted_event_message = str(eventData)
+                if printChat:
+                    print("[ChatEvent] " + formatted_event_message+ " "*30)
+            except asyncio.TimeoutError:
+                continue
+            except websockets.exceptions.WebSocketException as e:
+                print(f"[EventSocket] error while receiving chat message: {e!r}")
+                break
+            except Exception as e:
+                print(f"[EventSocket] error while processing chat message: {e!r}")
+                print(f"[EventSocket] message: {eventData}")
+                break
+            else:
+                with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
+                    f.write(formatted_event_message + "\n")
 
     async def RecieveMessages(websocket_url, TwAPI, filename, printChat, CommentFormatString, GiftFormatString):
         url = websocket_url
