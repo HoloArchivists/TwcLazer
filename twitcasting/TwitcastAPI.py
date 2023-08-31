@@ -5,7 +5,6 @@ import re
 import time
 from typing import Optional
 
-import javascript
 import requests
 
 from utils.CookiesHandler import CookiesHandler
@@ -28,52 +27,12 @@ class TwitcastingAPI:
             return None
         return auth_session_id.group(1)
 
-    
-    def GenerateJsRegex(self, js: str) -> str:
-        js = re.escape(js)
-        js = re.sub(r"\\\[.*?\]", r"(\[.*?\])", js) # list
-        js = re.sub(r"[0-9]+", r"([0-9]+)", js) # number
-        js = re.sub(r"[a-zA-Z_][a-zA-Z0-9_]*", r"([a-zA-Z_][a-zA-Z0-9_]*)", js) # field
-        js = re.sub(r"'.*?'|\".*?\"|`.*?`", r"('.*?'|\".*?\"|`.*?`)", js) # string
-        return js
-    
-    def GetSalt(self):
-        code = requests.get(
-            f"https://twitcasting.tv/js/v1/PlayerPage2.js?{int(time.time())}"
-        ).text
-
-        crypt_func = """function t(e,i){const s=n();return t=function(n,i){let r=s[n-=269];void 0===t.MXfUDE&&(t.PoYvHX=function(e){let t="",n="";for(let n,i,s=0,r=0;i=e.charAt(r++);~i&&(n=s%4?64*n+i:i,s++%4)?t+=String.fromCharCode(255&n>>(-2*s&6)):0)i="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=".indexOf(i);for(let e=0,i=t.length;e<i;e++)n+="%"+("00"+t.charCodeAt(e).toString(16)).slice(-2);return decodeURIComponent(n)},e=arguments,t.MXfUDE=!0);const a=n+s[0],o=e[a];return o?r=o:(r=t.PoYvHX(r),e[a]=r),r},t(e,i)}function n(){const e=["x3nW","yNL0zu9MzNnLDa","x3nPEMu","mJG5nJu4vM9jBvnr","zxHWB3j0CW","x19PBxbVCNrezwzHDwX0","mtC1mdC3ou95BfLmyG","mJGWmZC1mtboBwrRDem","y2HHCKnVzgvbDa","muvHvxH5EG","qLLurvnFuevsx0vmru1ftLq","wc1xzwiTu2vZC2LVBKLK","x19LC01VzhvSzq","Dg9vChbLCKnHC2u","nZu5nJu4oxPcEenQBG","r0vu","yM9KEq","mtfds2HIu0u","x2jPBG","x3vPBNq4","DxbKyxrL","mZy4nty4ogLZA2DisW","Dg9mB3DLCKnHC2u","nJe5mZi2nKvZDgHXsG","yNvMzMvY","nuzODgHXyq","AgvHzgvYCW","BgvUz3rO","wc1xzwiTqxv0Ag9YAxPLs2v5","sgfZAa","C3rYAw5N","x3v0zJG","rgLNzxn0ig1LDgHVzcbUB3qGC3vWCg9YDgvK","C2vZC2LVBKLK","mtHrturLBhm","zgvMAw5LuhjVCgvYDhK","y29Uy2f0","z2v0vgLTzq","zgLNzxn0","mtq0mdm2ohPYwfbguW","zgvMyxvSDa","yNL0zuXLBMD0Aa","Bgj2ngPQDNqXmZjKBNj0Da","Ahr0Chm6lY9JyxmUC3q","Agv4","C2v0","x3DVCMq","Cgf0Ag5HBwu","zMXVB3i","x2HLEa","y3jLyxrLsgfZAa","C2XPy2u","Dg9tDhjPBMC","x2LUDdmY"];return(n=function(){return e})()}(function(e,n){const i=t,s=e();for(;;)try{if(563747==parseInt(i(283))/1*(-parseInt(i(277))/2)+parseInt(i(280))/3+-parseInt(i(295))/4+-parseInt(i(299))/5*(parseInt(i(297))/6)+-parseInt(i(288))/7+parseInt(i(313))/8*(parseInt(i(308))/9)+-parseInt(i(281))/10*(-parseInt(i(291))/11))break;s.push(s.shift())}catch(e){s.push(s.shift())}})(n)"""
-        salt_func = """function(e,n,i){const s=t;var r=this&&this[s(279)]||function(e){return e&&e[s(286)]?e:{default:e}};Object[s(309)](n,s(286),{value:!0});var a=r(i(823));n[s(314)]=function(e,n,i,r){const o=s;var l;void 0===n&&(n={}),void 0===r&&(r=new Date);var c,u,d=(0,a.default)(function(e){const n=t;var i;return(null!==(i=e.method)&&void 0!==i?i:n(289))[n(287)]()}(n),e,i.sessionId,"string"==typeof(c=n)[o(290)]?c[o(290)]:"",null!==(l=i.salt)&&void 0!==l?l:null!==(u=o(316))?u:"",r),h=new Headers(n[o(300)]);return h[o(319)](o(285),i[o(307)]),h[o(319)](o(302),d),n[o(300)]=h,fetch(e,n)}}"""
-        salt_expr = 'null!==(u=o(316))?u:""'
-
-        # generate regex
-        crypt_func = self.GenerateJsRegex(crypt_func)
-        salt_func = self.GenerateJsRegex(salt_func)
-        salt_expr = self.GenerateJsRegex(salt_expr)
-
-        # find regex
-        crypt_func = re.search(crypt_func, code).group(0)
-        salt_func = re.search(salt_func, code).group(0)
-        salt_expr = re.search(salt_expr, salt_func).group(0)
-
-        # find number
-        salt = re.search(r"[0-9]+", salt_expr).group(0)
-
-        decrypt_code = f"""
-        {crypt_func}
-        result["salt"] = t({salt}, 0);
-        """
-
-        result = {}
-        javascript.eval_js(decrypt_code)
-        return result["salt"]
-
     def GenerateAuthHeaders(self, path, sessionID, method="POST") -> dict:
         if sessionID is None:
             print(f"Unable to generate authorization headers for {path}: no session id provided")
             return {}
 
-        seed = self.GetSalt()
+        seed = "gu9mi5r5kk603pfc"
         timestamp = int(time.time())
         text = f"{seed}{timestamp}{method}{path}{sessionID}"
         h = hashlib.sha256()
