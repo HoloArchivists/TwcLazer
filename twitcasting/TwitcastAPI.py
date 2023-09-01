@@ -67,8 +67,8 @@ class TwitcastingAPI:
             TokenRequestData = json.loads(TokenRequest.text)
             Token = TokenRequestData["token"]
         except (json.decoder.JSONDecodeError, KeyError) as e:
-            print(f"Error parsing token for movie {movieID}: {e!r}. Raw token data: '{TokenRequest.text}'")
-            raise
+            msg = f"Error parsing token for movie {movieID}: {e!r}. Raw token data: '{TokenRequest.text}'"
+            raise TwitcastingAPIError(msg) from e
 
         return TwitcastStream.HappyToken(Token)
 
