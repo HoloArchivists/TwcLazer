@@ -71,11 +71,7 @@ else:
     print(f"{UserIn['username']} is not live.")
     sys.exit(1)
 
-try:
-    TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
-except TwitcastAPI.TwitcastingAPIError as e:
-    print(e)
-    sys.exit(1)
+TwAPI = TwitcastAPI.TwitcastingAPI(UserIn)
 
 # Now that we have the API object Created, we're good to go for making the fileformat object
 today = datetime.datetime.now()

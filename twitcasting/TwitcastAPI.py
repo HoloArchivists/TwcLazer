@@ -8,6 +8,7 @@ from typing import Optional
 import requests
 
 from utils.CookiesHandler import CookiesHandler
+from utils.Salt import get_salt
 import twitcasting.TwitcastStream as TwitcastStream
 
 
@@ -27,12 +28,23 @@ class TwitcastingAPI:
             return None
         return auth_session_id.group(1)
 
+    def GetSalt(self) -> str:
+        player_url = "https://twitcasting.tv/js/v1/PlayerPage2.js"
+        player_page = self.session.get(player_url)
+        if player_page.status_code != 200:
+            print(f"Got status code {player_page.status_code} when requesting PlayerPage2")
+        try:
+            return get_salt(player_page.text)
+        except Exception as e:
+            msg = "Failed to extract value used to generate authorization headers from PlayerPage. Check for updates and report this issue on GitHub along with the error message above if it happens on the most recent version"
+            raise TwitcastingAPIError(msg) from e
+
     def GenerateAuthHeaders(self, path, sessionID, method="POST") -> dict:
         if sessionID is None:
             print(f"Unable to generate authorization headers for {path}: no session id provided")
             return {}
 
-        seed = "gu9mi5r5kk603pfc"
+        seed = self.GetSalt()
         timestamp = int(time.time())
         text = f"{seed}{timestamp}{method}{path}{sessionID}"
         h = hashlib.sha256()
@@ -55,8 +67,8 @@ class TwitcastingAPI:
             TokenRequestData = json.loads(TokenRequest.text)
             Token = TokenRequestData["token"]
         except (json.decoder.JSONDecodeError, KeyError) as e:
-            print(f"Error parsing token for movie {movieID}: {e!r}. Raw token data: '{TokenRequest.text}'")
-            raise
+            msg = f"Error parsing token for movie {movieID}: {e!r}. Raw token data: '{TokenRequest.text}'"
+            raise TwitcastingAPIError(msg) from e
 
         return TwitcastStream.HappyToken(Token)
 
