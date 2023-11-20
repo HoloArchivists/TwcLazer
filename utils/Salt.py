@@ -28,7 +28,7 @@ def get_base_offset(js):
 def get_shift_offsets(js):
     # picking up indexes from the
     # "... parseInt(n(429)) / 1 + parseInt(n(448)) / 2 * ( - parseInt(n(428)) / 3) ..."
-    re_offsets_line = 'if\(\d+==(.+)break;s.push\(s.shift\(\)\)}'
+    re_offsets_line = 'if\(\d+==(.+)break;[a-z].push\([a-z].shift\(\)\)}'
     offsets_line = re.search(re_offsets_line, js).groups()[0]
     re_offsets = 'parseInt\([a-z]\((\d+)\)\)'
     offsets = re.findall(re_offsets, offsets_line)
