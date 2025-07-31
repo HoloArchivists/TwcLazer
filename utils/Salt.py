@@ -13,7 +13,7 @@ def get_encoded_array(js):
     # array of encoded strings with function names and constants, used
     # in various places of the script. One of them is the salt.
     # Surprizingly, "const e" doesn't change over the versions of the script
-    re_constants = "const e=\[((\"[a-zA-Z0-9]+\",)+\"[a-zA-Z0-9]+\")\]"
+    re_constants = "let e=\[((\"[a-zA-Z0-9]+\",)+\"[a-zA-Z0-9]+\")\]"
     match = re.search(re_constants, js)
     return [x.strip('"') for x in match.groups()[0].split(',')]
 
@@ -21,7 +21,7 @@ def get_base_offset(js):
     # strings on the array are accessed through specifying its index,
     # and function wrapping the array substracts constant value from
     # index it receives, which is different every script version
-    re_offset = "const [a-z]=[a-z]\(\);return [a-z]=function\([a-z],[a-z]\){let [a-z]=[a-z]\[[a-z]-=(\d+)\];"
+    re_offset = "let [a-z]=[a-z]\(\);return\([a-z]=function\([a-z],[a-z]\){let [a-z]=[a-z]\[[a-z]-=(\d+)\];"
     offset = re.findall(re_offset, js)[0]
     return int(offset)
 
