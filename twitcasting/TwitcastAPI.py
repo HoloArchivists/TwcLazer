@@ -34,7 +34,9 @@ class TwitcastingAPI:
         if player_page.status_code != 200:
             print(f"Got status code {player_page.status_code} when requesting PlayerPage2")
         try:
-            return get_salt(player_page.text)
+            salt = get_salt(player_page.text)
+            print(f'Current salt is {salt}')
+            return salt
         except Exception as e:
             msg = "Failed to extract value used to generate authorization headers from PlayerPage. Check for updates and report this issue on GitHub along with the error message above if it happens on the most recent version"
             raise TwitcastingAPIError(msg) from e
@@ -202,6 +204,11 @@ class TwitcastingAPI:
         username = self.userInput["username"]
         user_url = f"https://twitcasting.tv/{username}"
         return CookiesHandler.get_cookies_header(self.session.cookies, user_url)
+
+    def refetch(self):
+        new_instance = TwitcastingAPI(self.userInput)
+        print(f"fetched new TwitcastingAPI instance, {new_instance.CurrentStreamToken=}, {new_instance.CurrentStreamInfo=}")
+        return new_instance
 
     def __init__(self, UserInput) -> None:
         # Input TwitcastStream.py Userinput object
