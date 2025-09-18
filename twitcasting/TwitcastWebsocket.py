@@ -1,10 +1,18 @@
 # Twitcasting Websocket Handler
-import websockets, asyncio
+import asyncio
+import json
+import urllib
+from pathlib import Path
+
+import websockets
+import websockets.asyncio.client
+
 import twitcasting.TwitcastStream as TwitcastStream
 import utils.ChatFormatter as ChatFormatter
 import helpers.CLIhelper as CLIhelper
-import json
-import urllib
+
+
+MAX_CONNECT_ATTEMPTS = 4
 
 # Twitcasting Video Socket
 # Get Video Data from the twitcasting websocket
@@ -27,28 +35,52 @@ class TwitcastVideoSocket:
     # Gather Stream Frames
     async def listen(url, TwitcastApiOBJ, filename, NoRetry=False):
         recieved_bytes = 0
+        part = 0
         while True:
-            async with websockets.connect(url, extra_headers=TwitcastApiOBJ.cookies_header) as ws:
+            suffix = f"_{part}" if part > 0 else ""
+            current_filename = f"{filename}{suffix}.mp4"
+            part += 1
+            if Path(current_filename).exists():
+                print(f"File already exists: {current_filename}")
+                continue # abusing fact that loop is infinite to avoid nesting another one just for name probing
+            for attempt in range(MAX_CONNECT_ATTEMPTS):
                 try:
-                    while True:
-                        with open(f"{filename}.mp4", 'ab') as filewriter:
-                            msg = await asyncio.wait_for(ws.recv(), timeout=25) # https://github.com/HoloArchivists/TwcLazer/issues/5
-                            if len(msg) != 1108:
-                                recieved_bytes += len(msg)
-                                print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end='\r')
-                                filewriter.write(msg)
-                except Exception as e:
-                    print(f"[WebSocket] {e!r}, checking if stream is still live" + " "*30)
-                    if TwitcastApiOBJ.is_live():
-                        if NoRetry == True:
-                            print("[WebSocket] Connection Dropped, Closing Socket..." + " "*30)
-                            break
-                        else:
-                            print("[WebSocket] Connection Dropped, Reconnecting" + " "*30)
-                            
-                    else:
-                        print("[WebSocket] Stream Ended, Closing Socket..." + " "*30)
+                    print(f"[Websocket] Trying to connect to {url}")
+                    ws = await websockets.asyncio.client.connect(url, additional_headers=TwitcastApiOBJ.cookies_header)
+                    print("[Websocket] Successfully connected, proceeding with download")
+                    break
+                except websockets.WebSocketException as e:
+                    if attempt < MAX_CONNECT_ATTEMPTS - 1:
+                        print(f"[Websocket] Error connecting to websocket: {type(e)} {e}. Trying to update url")
+                        TwitcastApiOBJ = TwitcastApiOBJ.refetch()
+                        continue
+            else:
+                print("[WebSocket] Unable to establish websocket connection, aborting download")
+                break
+            try:
+                while True:
+                    with open(current_filename, "ab") as filewriter:
+                        msg = await asyncio.wait_for(ws.recv(), timeout=25) # https://github.com/HoloArchivists/TwcLazer/issues/5
+                        if len(msg) != 1108:
+                            recieved_bytes += len(msg)
+                            print(f"[WebSocket] Recieved {TwitcastVideoSocket.count(len(msg))} from host | Collected {TwitcastVideoSocket.count(recieved_bytes, format='MB')}    ", end="\r")
+                            filewriter.write(msg)
+            except OSError as e:
+                print(f"[WebSocket] Failed to write received data on disk: {e}. Closing Socket...")
+                break
+            except Exception as e:
+                print(f"[WebSocket] {e!r}, checking if stream is still live" + " "*30)
+                if TwitcastApiOBJ.is_live():
+                    if NoRetry == True:
+                        print("[WebSocket] Connection Dropped, Closing Socket..." + " "*30)
                         break
+                    else:
+                        print("[WebSocket] Connection Dropped, Reconnecting" + " "*30)
+                else:
+                    print("[WebSocket] Stream Ended, Closing Socket..." + " "*30)
+                    break
+            finally:
+                await ws.close()
     
     async def runListener(TwitcastApiOBJ, filename, quality="low", NoWarn=False, NoRetry=False):
         
@@ -65,6 +97,7 @@ class TwitcastVideoSocket:
         if url == None and quality == "low":
             print("Unable to locate MobileSource, Defaulting to Main.")
             url = qualities["best"]
+
         password = TwitcastApiOBJ.GetPasswordCookie(TwitcastApiOBJ.userInput["username"])
         if password is not None:
             url = update_url(url, [("word", password)])
@@ -143,7 +176,7 @@ class TwitcastEventSocket:
                     print("[ChatEvent] " + formatted_event_message+ " "*30)
             except asyncio.TimeoutError:
                 continue
-            except websockets.exceptions.WebSocketException as e:
+            except websockets.WebSocketException as e:
                 print(f"[EventSocket] error while receiving chat message: {e!r}")
                 break
             except Exception as e:
@@ -151,10 +184,32 @@ class TwitcastEventSocket:
                 print(f"[EventSocket] message: {eventData}")
                 break
             else:
-                with open(f"{filename}.txt", 'a+', encoding="utf8") as f:
+                with open(f"{filename}.txt", "a+", encoding="utf8") as f:
                     f.write(formatted_event_message + "\n")
 
     async def RecieveMessages(websocket_url, TwAPI, filename, printChat, CommentFormatString, GiftFormatString):
         url = websocket_url
-        async with websockets.connect(url, extra_headers=TwAPI.cookies_header) as ws:
-            await TwitcastEventSocket.eventhandler(ws, TwAPI, filename, printChat, CommentFormatString, GiftFormatString)
+        while TwAPI.is_live():
+            print("[EventSocket] stream is live, downloading chat")
+            for attempt in range(MAX_CONNECT_ATTEMPTS):
+                try:
+                    print(f"[EventSocket] Trying to connect to {url}")
+                    ws = await websockets.asyncio.client.connect(url, additional_headers=TwAPI.cookies_header)
+                    print("[EventSocket] Successfully connected, proceeding with download")
+                    break
+                except websockets.WebSocketException as e:
+                    if attempt < MAX_CONNECT_ATTEMPTS - 1:
+                        print(f"[EventSocket] Error connecting to websocket: {e}. Trying to update url")
+                        TwAPI = TwAPI.refetch()
+                        continue
+            else:
+                print("[EventSocket] Unable to establish websocket connection, aborting download")
+                break
+            try:
+                await TwitcastEventSocket.eventhandler(ws, TwAPI, filename, printChat, CommentFormatString, GiftFormatString)
+            except websockets.WebSocketException as e:
+                print(f"[EventSocket] {e!r}, checking if stream is still live" + " "*30)
+                continue
+            finally:
+                await ws.close()
+        print("[EventSocket] stream ended")
