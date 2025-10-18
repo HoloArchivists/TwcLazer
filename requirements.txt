@@ -1,0 +1,2 @@
+requests
+websockets>=13.0
