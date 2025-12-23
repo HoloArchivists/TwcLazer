@@ -68,9 +68,18 @@ def get_salt_offset(js):
     # extracting array offset for salt value from the place in code that makes use of it.
     # Since array can be decoded and rotated to right position, all that is left is to
     # get the salt value out of it by its offset
-    re_salt_offset = 'null!=\([a-z]=[a-z]\.salt\)\?[a-z]:[a-z]\((\d+)\),[a-z]\)'
-    match = re.search(re_salt_offset, js)
-    return int(match.groups()[0])
+    re_salt_offsets = [
+        r'null!=\([a-z]=[a-z]\.salt\)\?[a-z]:[a-z]\((\d+)\),[a-z]\)',
+        r'null!=\([a-z]=[a-z]\[[a-z]\(\d+\)\]\)\?[a-z]:[a-z]\((\d+)\),[a-z]\),'
+    ]
+    for re_salt_offset in re_salt_offsets:
+        results = re.findall(re_salt_offset, js)
+        try:
+            return int(results[0])
+        except (IndexError, ValueError):
+            continue
+    raise Exception('none of the salt offset patterns matched')
+
 
 def get_salt(js):
     salt_offset = get_salt_offset(js) - get_base_offset(js)
