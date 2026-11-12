@@ -70,10 +70,7 @@ def get_salt_offset(js):
     # get the salt value out of it by its offset
     re_salt_offsets = [
         r'null!=\([a-z]=[a-z]\.salt\)\?[a-z]:[a-z]\((\d+)\),[a-z]\)',
-        r'null!=\([a-z]=[a-z]\[[a-z]\(\d+\)\]\)\?[a-z]:[a-z]\((\d+)\),[a-z]\),',
-        # same shapes with variable/function names of any length
-        r'null!=\([\w$]+=[\w$]+\.salt\)\?[\w$]+:[\w$]+\((\d+)\)',
-        r'null!=\([\w$]+=[\w$]+\[[\w$]+\(\d+\)\]\)\?[\w$]+:[\w$]+\((\d+)\)',
+        r'null!=\([a-z]=[a-z]\[[a-z]\(\d+\)\]\)\?[a-z]:[a-z]\((\d+)\),[a-z]\),'
     ]
     for re_salt_offset in re_salt_offsets:
         results = re.findall(re_salt_offset, js)
@@ -166,37 +163,8 @@ def decode_array_by_checksum(js, extra_indexes=()):
     return matches
 
 
-def dump_debug(js, reason):
-    """Save the script TwcLazer received and print the parts needed to adapt the patterns."""
-    print('----- SALT DEBUG (please paste everything from here to the end marker) -----')
-    print(f'reason: {reason}')
-    print(f'script length: {len(js)}; starts with: {js[:120]!r}')
-    try:
-        with open('PlayerPage2_failed.js', 'w', encoding='utf-8') as f:
-            f.write(js)
-        print('full script saved as PlayerPage2_failed.js (in the folder you ran TwcLazer from)')
-    except Exception as e:
-        print(f'could not save script: {e}')
-    shown = 0
-    for m in re.finditer(r'shift', js):
-        print(f'... around "shift" at {m.start()}: {js[max(0, m.start() - 650): m.end() + 120]!r}')
-        shown += 1
-        if shown >= 2:
-            break
-    m = re.search(r'parseInt\([\w$]+\(\d+\)\)', js)
-    if m:
-        print(f'... around first parseInt(x(N)): {js[max(0, m.start() - 150): m.end() + 450]!r}')
-    for m in list(re.finditer(r'salt', js, re.I))[:3]:
-        print(f'... around "salt": {js[max(0, m.start() - 100): m.end() + 100]!r}')
-    print('----- END SALT DEBUG -----')
-
-
 def get_salt(js):
-    try:
-        salt_index = get_salt_offset(js)
-    except Exception as e:
-        dump_debug(js, f'salt offset: {e}')
-        raise
+    salt_index = get_salt_offset(js)
     try:
         matches = decode_array_by_checksum(js, extra_indexes=[salt_index])
         salts = []
@@ -209,10 +177,7 @@ def get_salt(js):
         return salts[0]
     except Exception as e:
         print(f'Checksum-based salt extraction failed ({e}), trying pattern-based extraction')
-    try:
-        salt_offset = salt_index - get_base_offset(js)
-        strings = decode_array(js)
-        return strings[salt_offset]
-    except Exception as e:
-        dump_debug(js, f'{type(e).__name__}: {e}')
-        raise
+    salt_offset = salt_index - get_base_offset(js)
+    strings = decode_array(js)
+    salt = strings[salt_offset]
+    return salt
