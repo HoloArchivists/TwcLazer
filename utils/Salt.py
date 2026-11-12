@@ -81,8 +81,103 @@ def get_salt_offset(js):
     raise Exception('none of the salt offset patterns matched')
 
 
+def js_parse_int(text):
+    # JS parseInt() for the cases that matter here: leading number or NaN
+    m = re.match(r'\s*[+-]?\d+', text)
+    return float(int(m.group(0))) if m else float('nan')
+
+
+def _check_from_parts(expr, target):
+    indexes = [int(x) for x in re.findall(r'parseInt\([\w$]+\((\d+)\)\)', expr)]
+    if not indexes:
+        return None
+    py_expr = re.sub(r'parseInt\([\w$]+\((\d+)\)\)', r'P(\1)', expr)
+    # only arithmetic on P(...) calls may reach eval()
+    if not re.fullmatch(r'[P0-9()+\-*/. ]+', py_expr):
+        return None
+    return py_expr, float(target), indexes
+
+
+def get_rotation_check(js):
+    """
+    The script rotates the string array until a checksum expression equals a constant:
+
+        for(var t=e();;)try{if(parseInt(n(214))/1+-parseInt(n(190))/2+...===597197)break;
+                            t.push(t.shift())}catch(e){t.push(t.shift())}
+
+    Older versions wrote the constant first: if(597197==expr)break;
+    Returns (python_expression, target, [indexes passed to n()]).
+    """
+    patterns = [
+        (r'if\((.+?)===?(-?\d+)\)break;[a-zA-Z_$][\w$]*\.push\([a-zA-Z_$][\w$]*\.shift\(\)\)', False),
+        (r'if\((-?\d+)===?(.+?)\)break;[a-zA-Z_$][\w$]*\.push\([a-zA-Z_$][\w$]*\.shift\(\)\)', True),
+    ]
+    for pattern, constant_first in patterns:
+        for m in re.finditer(pattern, js):
+            expr, target = (m.group(2), m.group(1)) if constant_first else (m.group(1), m.group(2))
+            result = _check_from_parts(expr, target)
+            if result:
+                return result
+    # looser: any  if(<expression with parseInt(x(NNN)) calls> ==(=) NUMBER) break  ,
+    # whatever the rotate statement around it looks like
+    loose = r'if\(([^;{}]*?parseInt\([\w$]+\(\d+\)\)[^;{}]*?)\)\s*\{?\s*break'
+    for m in re.finditer(loose, js):
+        body = m.group(1).strip()
+        a = re.fullmatch(r'(.+?)\s*===?\s*(-?\d+)', body, re.S)
+        b = re.fullmatch(r'(-?\d+)\s*===?\s*(.+)', body, re.S)
+        for expr, target in ([(a.group(1), a.group(2))] if a else []) + ([(b.group(2), b.group(1))] if b else []):
+            result = _check_from_parts(expr, target)
+            if result:
+                return result
+    raise Exception('rotation check expression not found')
+
+
+def decode_array_by_checksum(js, extra_indexes=()):
+    """
+    Finds the (index offset, rotation) pair for which the script's own checksum holds,
+    without needing the code of the wrapper function that applies the offset.
+    Returns a list of (base_offset, decoded_array_in_runtime_order) matches. Offset and
+    rotation are interchangeable (both shift the lookup), so many matches are normal.
+    """
+    py_expr, target, indexes = get_rotation_check(js)
+    array = [decode_string(x) for x in get_encoded_array(js)]
+    size = len(array)
+    needed = list(indexes) + list(extra_indexes)
+    base_low = max(needed) - (size - 1)   # smallest offset keeping every index inside the array
+    base_high = min(needed)               # largest offset keeping every index inside the array
+    matches = []
+    for base in range(base_low, base_high + 1):
+        rotated = array.copy()
+        for rotation in range(size):
+            def P(idx, rotated=rotated, base=base):
+                return js_parse_int(rotated[idx - base])
+            try:
+                value = eval(py_expr, {'__builtins__': {}}, {'P': P})
+            except Exception:
+                value = float('nan')
+            if value == target:
+                matches.append((base, rotated.copy()))
+            rotated.append(rotated.pop(0))
+    if not matches:
+        raise Exception('checksum not satisfied for any offset/rotation')
+    return matches
+
+
 def get_salt(js):
-    salt_offset = get_salt_offset(js) - get_base_offset(js)
+    salt_index = get_salt_offset(js)
+    try:
+        matches = decode_array_by_checksum(js, extra_indexes=[salt_index])
+        salts = []
+        for base, strings in matches:
+            salt = strings[salt_index - base]
+            if salt not in salts:
+                salts.append(salt)
+        if len(salts) > 1:
+            print(f'Salt extraction: checksum matched {len(salts)} different salt candidates, using first one: {salts}')
+        return salts[0]
+    except Exception as e:
+        print(f'Checksum-based salt extraction failed ({e}), trying pattern-based extraction')
+    salt_offset = salt_index - get_base_offset(js)
     strings = decode_array(js)
     salt = strings[salt_offset]
     return salt
